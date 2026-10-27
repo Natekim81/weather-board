@@ -33,12 +33,14 @@
       <select id="regionInput"><option>세종</option><option>대전</option><option>태안</option><option>보령</option></select>
       <select id="kindInput"><option>야외</option><option>고소</option><option>실내</option></select>
       <input id="ownerInput" placeholder="담당" required>
-      <button>추가</button>
+      <button id="addTaskButton" disabled>추가</button>
     </form>
-    <p id="msgBox"></p>
+    <p id="msgBox" role="status"></p>
   </section>
 
   <script src="logic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
