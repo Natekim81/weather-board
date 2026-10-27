@@ -11,7 +11,8 @@ const SAMPLE_TASKS = [
 ];
 
 let tasks = [];
-let weatherByRegion = {};   // 03 단원에서 지역별 날씨를 넣음
+let weatherByRegion = {};
+const windTest = new URLSearchParams(window.location.search).get('test') === 'wind';
 
 function loadTasks() {
   const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
@@ -19,7 +20,42 @@ function loadTasks() {
 }
 
 function weatherText(w) {
-  return w ? w.tempMax + '℃ · ' + w.windMax + 'm/s · ' + w.rainProb + '%' : '-';
+  if (!w) return '-';
+  const value = (n, unit) => Number.isFinite(n) ? n + unit : '미수신';
+  return '최고 ' + value(w.tempMax, '℃') + ' · 최대 ' + value(w.windMax, ' m/s') +
+    ' · 강수확률 ' + value(w.rainProb, '%');
+}
+
+async function loadWeather() {
+  const box = document.getElementById('weatherBox');
+  const failed = [];
+  let completed = 0;
+  const regions = Object.keys(REGIONS);
+  const testNotice = windTest ? ' · 강풍 시험 모드: 모든 지역 풍속 12 m/s (시험값)' : '';
+  box.textContent = '오늘 날씨 불러오는 중 (한국 시간 기준)' + testNotice;
+
+  await Promise.all(regions.map(async (region) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch(buildWeatherUrl(region), { signal: controller.signal });
+      if (!response.ok) throw new Error('날씨 API 요청 실패');
+      const weather = parseWeatherResponse(await response.json());
+      weatherByRegion[region] = applyWindTest(weather, windTest);
+    } catch (error) {
+      failed.push(region);
+      weatherByRegion[region] = applyWindTest(null, windTest);
+    } finally {
+      clearTimeout(timeout);
+      completed += 1;
+      renderTasks();
+      const progress = completed < regions.length
+        ? '오늘 날씨 불러오는 중 (' + completed + '/' + regions.length + ')'
+        : '오늘 날씨 수신: ' + (regions.length - failed.length) + '/' + regions.length + '개 지역';
+      const failure = failed.length ? ' · 수신 실패: ' + failed.join(', ') + ' (새로고침해 다시 시도)' : '';
+      box.textContent = progress + ' · 한국 시간 기준 일별 최댓값' + failure + testNotice;
+    }
+  }));
 }
 
 function renderTasks() {
@@ -62,3 +98,4 @@ function addTask(e) {
 document.getElementById('taskForm').addEventListener('submit', addTask);
 loadTasks();
 renderTasks();
+loadWeather();
