@@ -48,17 +48,6 @@ async function loadTasks() {
   }
 }
 
-function isPublicSupabaseKey(key) {
-  if (key.startsWith('sb_publishable_')) return true;
-  // 기존 anon JWT도 지원하되 service_role 등의 키는 클라이언트를 만들기 전에 거부한다.
-  try {
-    const payload = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(payload)).role === 'anon';
-  } catch (error) {
-    return false;
-  }
-}
-
 function weatherText(w) {
   if (!w) return '-';
   const value = (n, unit) => Number.isFinite(n) ? n + unit : '미수신';

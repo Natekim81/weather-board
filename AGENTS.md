@@ -9,12 +9,15 @@
 ## 기술 스택 (변경 금지)
 - HTML + CSS + 순수 JavaScript만 사용한다. (React 등 프레임워크, 빌드 도구 사용 금지)
 - index.html 을 더블클릭해서 열 수 있어야 한다.
+- F-07의 /api/kma는 Vercel Node.js Function으로 실행한다. 서버 API는 배포 주소에서 사용한다.
 
 ## 폴더 구조
 - index.html : 화면 구조
 - style.css  : 디자인
 - logic.js   : 판단 규칙만 (화면을 다루는 코드 금지)
 - app.js     : 화면 동작 (목록 그리기, 일정 추가)
+- api/kma.js : 지역별 DB 일정·기상청 날씨·판단 조회 (서버)
+- config.js  : 브라우저·서버 공용 Supabase 주소·공개용 키 두 줄
 - PRD.md · AGENTS.md · CLAUDE.md · README.md : 문서
 
 ## 작업 방식
@@ -29,3 +32,4 @@
 - 가상 데이터만 사용한다. 실제 이름 · 연락처 · 기관 내부 자료를 넣지 않는다.
 - 사용자가 입력한 글자는 textContent 로 표시한다.
 - 비밀 키는 코드 · 채팅 · GitHub 에 넣지 않는다.
+- 기상청 인증키는 서버 환경변수 KMA_KEY에서만 읽는다. 인증키가 든 호출 URL·외부 오류 원문을 응답·로그에 남기지 않는다.

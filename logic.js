@@ -11,6 +11,82 @@ const REGIONS = {
   '보령': { latitude: 36.3335, longitude: 126.6128 },
 };
 
+// 위 대표 좌표에 대응하는 기상청 5km 예보 격자.
+const KMA_GRIDS = {
+  '세종': { nx: 66, ny: 103 },
+  '대전': { nx: 67, ny: 100 },
+  '태안': { nx: 48, ny: 109 },
+  '보령': { nx: 54, ny: 100 },
+};
+
+function isPublicSupabaseKey(key) {
+  if (typeof key !== 'string') return false;
+  if (key.startsWith('sb_publishable_')) return true;
+  try {
+    const payload = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(payload)).role === 'anon';
+  } catch (error) {
+    return false;
+  }
+}
+
+function kmaForecastPeriod(now = new Date()) {
+  return {
+    date: koreanDate(now),
+    // 전날 23시 예보를 사용해 오늘 00~23시 전체를 포함한다.
+    baseDate: koreanDate(new Date(now.getTime() - 86400000)).replace(/-/g, ''),
+    baseTime: '2300',
+  };
+}
+
+function buildKmaUrl(region, key, period) {
+  if (!Object.hasOwn(KMA_GRIDS, region)) throw new Error('지원하지 않는 지역');
+  if (typeof key !== 'string' || !key.trim()) throw new Error('기상청 키 없음');
+  let serviceKey = key.trim();
+  // 공공데이터포털의 Encoding·Decoding 키 모두 한 번만 URL 인코딩한다.
+  if (/%[0-9a-f]{2}/i.test(serviceKey)) serviceKey = decodeURIComponent(serviceKey);
+  const params = new URLSearchParams({
+    serviceKey, pageNo: '1', numOfRows: '1000', dataType: 'JSON',
+    base_date: period.baseDate, base_time: period.baseTime,
+    nx: KMA_GRIDS[region].nx, ny: KMA_GRIDS[region].ny,
+  });
+  return 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?' + params;
+}
+
+function parseKmaResponse(data, date) {
+  const response = data && data.response;
+  if (!response || !response.header || response.header.resultCode !== '00') {
+    throw new Error('기상청 예보 조회 실패');
+  }
+  const items = response.body && response.body.items && response.body.items.item;
+  if (!Array.isArray(items)) throw new Error('기상청 예보 없음');
+  const series = { TMP: new Map(), WSD: new Map(), POP: new Map() };
+  const dailyMax = [];
+  for (const item of items) {
+    if (!item || item.fcstDate !== date.replace(/-/g, '') ||
+        !/^(?:[01]\d|2[0-3])00$/.test(item.fcstTime)) continue;
+    if (!Object.hasOwn(series, item.category) && item.category !== 'TMX') continue;
+    if (typeof item.fcstValue !== 'string' && typeof item.fcstValue !== 'number') continue;
+    if (String(item.fcstValue).trim() === '') continue;
+    const value = Number(item.fcstValue);
+    if (!Number.isFinite(value)) continue;
+    if ((item.category === 'TMP' || item.category === 'TMX') && (value < -100 || value > 100)) continue;
+    if (item.category === 'WSD' && value < 0) continue;
+    if (item.category === 'POP' && (value < 0 || value > 100)) continue;
+    if (item.category === 'TMX') dailyMax.push(value);
+    else series[item.category].set(item.fcstTime, value);
+  }
+  // 일부 시간만 받은 값을 하루 최댓값으로 오인하지 않는다.
+  if (Object.values(series).some(values => values.size !== 24)) {
+    throw new Error('오늘 하루 예보가 불완전함');
+  }
+  return {
+    tempMax: Math.max(...series.TMP.values(), ...dailyMax),
+    windMax: Math.max(...series.WSD.values()),
+    rainProb: Math.max(...series.POP.values()),
+  };
+}
+
 function buildWeatherUrl(region) {
   const coordinates = REGIONS[region];
   if (!coordinates) throw new Error('지원하지 않는 지역');
@@ -87,4 +163,5 @@ function buildJudgmentMarkdown(rows, date, windTest = false) {
 if (typeof module !== 'undefined') module.exports = {
   RULES, REGIONS, buildWeatherUrl, parseWeatherResponse, applyWindTest, judge,
   koreanDate, buildJudgmentMarkdown,
+  KMA_GRIDS, isPublicSupabaseKey, kmaForecastPeriod, buildKmaUrl, parseKmaResponse,
 };
