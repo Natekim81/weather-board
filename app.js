@@ -102,6 +102,22 @@ function renderTasks() {
   }
 }
 
+function downloadJudgment() {
+  const date = koreanDate();
+  const rows = Array.from(document.getElementById('taskList').rows,
+    row => Array.from(row.cells, cell => cell.textContent));
+  const markdown = buildJudgmentMarkdown(rows, date, windTest);
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '현장일정_판단_' + date + '.md';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function addTask(e) {
   e.preventDefault();
   if (!tasksReady) return;
@@ -127,6 +143,7 @@ function addTask(e) {
 }
 
 document.getElementById('taskForm').addEventListener('submit', addTask);
+document.getElementById('saveMarkdownButton').addEventListener('click', downloadJudgment);
 loadTasks();
 renderTasks();
 loadWeather();

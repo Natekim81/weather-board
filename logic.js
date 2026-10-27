@@ -57,6 +57,34 @@ function judge(kind, w) {
   return { level: 'ok', text: '진행' };
 }
 
+function koreanDate(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const part = type => parts.find(p => p.type === type).value;
+  return part('year') + '-' + part('month') + '-' + part('day');
+}
+
+// 화면에서 읽은 셀 문자열만 받아 Markdown을 만든다. DOM·다운로드 처리는 app.js에서 한다.
+function buildJudgmentMarkdown(rows, date, windTest = false) {
+  const escapeCell = value => String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/[\\`*_\[\]|~]/g, '\\$&')
+    .replace(/\r\n|\r|\n/g, '<br>');
+  const lines = ['# 현장 일정 판단 — ' + date, ''];
+  if (windTest) lines.push('강풍 시험 모드: 풍속 12 m/s는 시험값입니다.', '');
+  lines.push('| 일정 | 지역 | 구분 | 담당 | 날씨 | 판단 |',
+    '| --- | --- | --- | --- | --- | --- |');
+  for (const row of rows) {
+    lines.push('| ' + row.map(escapeCell).join(' | ') + ' |');
+  }
+  lines.push('', '판단 기준(교육용): 고소 풍속 ' + RULES.wind +
+    ' m/s 이상 → 중지 검토 · 강수확률 ' + RULES.rain +
+    '% 이상 → 우천 주의 · 최고 기온 ' + RULES.heat + '℃ 이상 → 폭염 휴식');
+  return lines.join('\n') + '\n';
+}
+
 if (typeof module !== 'undefined') module.exports = {
   RULES, REGIONS, buildWeatherUrl, parseWeatherResponse, applyWindTest, judge,
+  koreanDate, buildJudgmentMarkdown,
 };
