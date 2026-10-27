@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>현장 일정 날씨판</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>현장 일정 날씨판</h1>
+    <p class="sub">오늘 현장 점검 · 야외 행사 · 시설 보수 일정 (교육용 가상 데이터)</p>
+  </header>
+
+  <section id="weatherBox" class="card">날씨 정보 없음 (03 단원에서 연결)</section>
+
+  <section class="card">
+    <h2>오늘 일정</h2>
+    <table>
+      <thead><tr><th>일정</th><th>지역</th><th>구분</th><th>담당</th><th>날씨</th><th>판단</th></tr></thead>
+      <tbody id="taskList"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>일정 추가</h2>
+    <form id="taskForm">
+      <input id="titleInput" placeholder="일정 이름" required>
+      <select id="regionInput"><option>세종</option><option>대전</option><option>태안</option><option>보령</option></select>
+      <select id="kindInput"><option>야외</option><option>고소</option><option>실내</option></select>
+      <input id="ownerInput" placeholder="담당" required>
+      <button>추가</button>
+    </form>
+    <p id="msgBox"></p>
+  </section>
+
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
